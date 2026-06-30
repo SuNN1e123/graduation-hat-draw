@@ -35,8 +35,41 @@
         .btn-redo { background: #9C27B0; }
         .btn-save { background: #4CAF50; font-size: 16px; padding: 12px; height: auto; }
         .status { text-align: center; font-size: 13px; color: #555; padding: 8px; background: white; border-radius: 8px; border: 1px solid #e0e0e0; min-height: 36px; display: flex; align-items: center; justify-content: center; }
-        .right-panel { flex: 1; background: white; border-radius: 8px; border: 2px solid #ddd; overflow: hidden; position: relative; min-height: 400px; }
-        .right-panel canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+        .right-panel { 
+            flex: 1; 
+            background: white; 
+            border-radius: 8px; 
+            border: 2px solid #ddd; 
+            overflow: hidden; 
+            position: relative; 
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .right-panel .canvas-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .right-panel canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+            cursor: crosshair;
+        }
+        #canvasBottom {
+            z-index: 1;
+        }
+        #canvasTop {
+            z-index: 2;
+        }
         .left-panel::-webkit-scrollbar { width: 4px; }
         .left-panel::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
         @media (max-width: 768px) {
@@ -105,20 +138,32 @@
         <div class="status" id="status">🟢 畫筆模式</div>
     </div>
     <div class="right-panel">
-        <canvas id="canvas"></canvas>
+        <div class="canvas-wrapper">
+            <canvas id="canvasBottom"></canvas>
+            <canvas id="canvasTop"></canvas>
+        </div>
     </div>
 </div>
 <script>
 // ============================================================
-// 雙層繪圖系統：底圖 + 繪圖層
+// 完美雙層繪圖系統
 // ============================================================
 
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
+// ----- 兩個 canvas -----
+const canvasBottom = document.getElementById('canvasBottom');  // 底層：只放圖片
+const canvasTop = document.getElementById('canvasTop');        // 上層：只放筆跡
+const ctxBottom = canvasBottom.getContext('2d');
+const ctxTop = canvasTop.getContext('2d');
 
-// ----- 畫布設定 -----
+// ----- 固定尺寸（像素） -----
 const CANVAS_WIDTH = 600;
 const CANVAS_HEIGHT = 600;
+
+// 設定兩個 canvas 的實際像素尺寸
+canvasBottom.width = CANVAS_WIDTH;
+canvasBottom.height = CANVAS_HEIGHT;
+canvasTop.width = CANVAS_WIDTH;
+canvasTop.height = CANVAS_HEIGHT;
 
 // ----- 繪圖設定 -----
 let penColor = '#FF0000';
@@ -128,44 +173,29 @@ let isDrawing = false;
 let lastX = null;
 let lastY = null;
 
-// ----- Undo/Redo -----
+// ----- Undo/Redo（只儲存上層） -----
 let undoStack = [];
 let redoStack = [];
 const MAX_HISTORY = 50;
 
 // ----- 圖片 -----
 let hatImage = null;
-
-// ----- 繪圖層（只儲存筆跡，不包含底圖）-----
-let drawingLayer = null;
+let imageLoaded = false;
 
 // ============================================================
 // 初始化
 // ============================================================
 
 function initCanvas() {
-    canvas.width = CANVAS_WIDTH;
-    canvas.height = CANVAS_HEIGHT;
+    // 設定上層為全透明
+    ctxTop.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     
-    // 建立空的繪圖層（全透明）
-    drawingLayer = ctx.createImageData(CANVAS_WIDTH, CANVAS_HEIGHT);
-    clearDrawingLayer();
-    
+    // 載入圖片
     loadHatImage();
 }
 
-function clearDrawingLayer() {
-    // 將繪圖層全部設為透明
-    for (let i = 0; i < drawingLayer.data.length; i += 4) {
-        drawingLayer.data[i] = 0;     // R
-        drawingLayer.data[i+1] = 0;   // G
-        drawingLayer.data[i+2] = 0;   // B
-        drawingLayer.data[i+3] = 0;   // A (完全透明)
-    }
-}
-
 // ============================================================
-// 載入圖片
+// 載入圖片（只畫在底層）
 // ============================================================
 
 function loadHatImage() {
@@ -173,67 +203,49 @@ function loadHatImage() {
     img.crossOrigin = 'anonymous';
     img.onload = function() {
         hatImage = img;
-        renderCanvas();
-        saveState();
+        imageLoaded = true;
+        // 畫到底層
+        ctxBottom.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctxBottom.drawImage(img, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         document.getElementById('status').textContent = '✅ 已載入圖片！';
         console.log('✅ 成功載入圖片：hat.png');
+        saveState();
     };
     img.onerror = function() {
-        // 找不到圖片時顯示提示
+        imageLoaded = false;
         hatImage = null;
-        renderCanvas();
-        
-        ctx.fillStyle = 'rgba(255,255,255,0.8)';
-        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-        ctx.fillStyle = 'black';
-        ctx.font = '24px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('請將你的畢業帽圖片', CANVAS_WIDTH/2, CANVAS_HEIGHT/2 - 30);
-        ctx.fillText('命名為 hat.png 放在此資料夾', CANVAS_WIDTH/2, CANVAS_HEIGHT/2 + 30);
-        
-        // 畫一個簡單的帽子
-        ctx.fillStyle = '#FFD700';
-        ctx.fillRect(200, 250, 200, 60);
-        ctx.fillStyle = '#8B0000';
-        ctx.fillRect(260, 310, 80, 50);
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(200, 250, 200, 60);
-        ctx.strokeRect(260, 310, 80, 50);
-        
-        saveState();
+        // 在底層顯示提示
+        ctxBottom.fillStyle = 'white';
+        ctxBottom.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctxBottom.fillStyle = 'black';
+        ctxBottom.font = '24px Arial';
+        ctxBottom.textAlign = 'center';
+        ctxBottom.textBaseline = 'middle';
+        ctxBottom.fillText('請將你的畢業帽圖片', CANVAS_WIDTH/2, CANVAS_HEIGHT/2 - 30);
+        ctxBottom.fillText('命名為 hat.png 放在此資料夾', CANVAS_WIDTH/2, CANVAS_HEIGHT/2 + 30);
+        ctxBottom.fillStyle = '#FFD700';
+        ctxBottom.fillRect(200, 250, 200, 60);
+        ctxBottom.fillStyle = '#8B0000';
+        ctxBottom.fillRect(260, 310, 80, 50);
+        ctxBottom.strokeStyle = '#000000';
+        ctxBottom.lineWidth = 3;
+        ctxBottom.strokeRect(200, 250, 200, 60);
+        ctxBottom.strokeRect(260, 310, 80, 50);
         alert('找不到 hat.png！\n請將你的畢業帽圖片命名為 hat.png 放在程式同一個資料夾中。');
         console.log('❌ 找不到 hat.png');
+        saveState();
     };
     img.src = 'hat.png';
 }
 
 // ============================================================
-// 渲染：底圖 + 繪圖層
-// ============================================================
-
-function renderCanvas() {
-    // 1. 畫底圖
-    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    if (hatImage) {
-        ctx.drawImage(hatImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    }
-    
-    // 2. 畫繪圖層（筆跡）
-    if (drawingLayer) {
-        ctx.putImageData(drawingLayer, 0, 0);
-    }
-}
-
-// ============================================================
-// 繪畫功能（直接操作繪圖層）
+// 繪畫功能（只畫在上層）
 // ============================================================
 
 function getPos(e) {
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
+    const rect = canvasTop.getBoundingClientRect();
+    const scaleX = canvasTop.width / rect.width;
+    const scaleY = canvasTop.height / rect.height;
     
     let clientX, clientY;
     if (e.touches) {
@@ -264,49 +276,37 @@ function draw(e) {
     if (!isDrawing || lastX === null || lastY === null) return;
     
     const pos = getPos(e);
-    const currentX = pos.x;
-    const currentY = pos.y;
+    const currentX = Math.max(0, Math.min(pos.x, CANVAS_WIDTH - 1));
+    const currentY = Math.max(0, Math.min(pos.y, CANVAS_HEIGHT - 1));
     
-    // 在繪圖層上畫畫
-    // 先把繪圖層轉為臨時 canvas 來畫
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = CANVAS_WIDTH;
-    tempCanvas.height = CANVAS_HEIGHT;
-    const tempCtx = tempCanvas.getContext('2d');
+    // ----- 只操作上層 canvas (ctxTop) -----
+    ctxTop.save();
     
-    // 把目前的繪圖層畫到 temp canvas
-    tempCtx.putImageData(drawingLayer, 0, 0);
-    
-    // 在 temp canvas 上畫筆跡
     if (eraserMode) {
-        // 橡皮擦：用透明色擦掉筆跡
-        tempCtx.globalCompositeOperation = 'destination-out';
-        tempCtx.strokeStyle = 'rgba(0,0,0,1)';
-        tempCtx.lineWidth = penWidth * 2;
-        tempCtx.lineCap = 'round';
-        tempCtx.lineJoin = 'round';
-        tempCtx.beginPath();
-        tempCtx.moveTo(lastX, lastY);
-        tempCtx.lineTo(currentX, currentY);
-        tempCtx.stroke();
+        // 橡皮擦：用 destination-out 擦掉上層的像素
+        ctxTop.globalCompositeOperation = 'destination-out';
+        ctxTop.strokeStyle = 'rgba(0,0,0,1)';
+        ctxTop.lineWidth = penWidth * 2;
+        ctxTop.lineCap = 'round';
+        ctxTop.lineJoin = 'round';
+        ctxTop.beginPath();
+        ctxTop.moveTo(lastX, lastY);
+        ctxTop.lineTo(currentX, currentY);
+        ctxTop.stroke();
     } else {
-        // 畫筆：正常畫
-        tempCtx.globalCompositeOperation = 'source-over';
-        tempCtx.strokeStyle = penColor;
-        tempCtx.lineWidth = penWidth;
-        tempCtx.lineCap = 'round';
-        tempCtx.lineJoin = 'round';
-        tempCtx.beginPath();
-        tempCtx.moveTo(lastX, lastY);
-        tempCtx.lineTo(currentX, currentY);
-        tempCtx.stroke();
+        // 畫筆：正常畫在上層
+        ctxTop.globalCompositeOperation = 'source-over';
+        ctxTop.strokeStyle = penColor;
+        ctxTop.lineWidth = penWidth;
+        ctxTop.lineCap = 'round';
+        ctxTop.lineJoin = 'round';
+        ctxTop.beginPath();
+        ctxTop.moveTo(lastX, lastY);
+        ctxTop.lineTo(currentX, currentY);
+        ctxTop.stroke();
     }
     
-    // 把 temp canvas 的內容存回 drawingLayer
-    drawingLayer = tempCtx.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    
-    // 重新渲染畫面
-    renderCanvas();
+    ctxTop.restore();
     
     lastX = currentX;
     lastY = currentY;
@@ -323,18 +323,16 @@ function stopDrawing(e) {
 }
 
 // ============================================================
-// Undo / Redo（只儲存繪圖層）
+// Undo / Redo（只儲存上層）
 // ============================================================
 
 function saveState() {
-    if (!drawingLayer) return;
+    // 儲存上層 canvas 的資料
+    const imageData = ctxTop.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     if (undoStack.length > MAX_HISTORY) {
         undoStack.shift();
     }
-    // 深拷貝繪圖層
-    const copy = ctx.createImageData(drawingLayer.width, drawingLayer.height);
-    copy.data.set(drawingLayer.data);
-    undoStack.push(copy);
+    undoStack.push(imageData);
     redoStack = [];
 }
 
@@ -344,14 +342,13 @@ function undo() {
         return;
     }
     // 儲存當前到 redo
-    const current = ctx.createImageData(drawingLayer.width, drawingLayer.height);
-    current.data.set(drawingLayer.data);
+    const current = ctxTop.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     redoStack.push(current);
     
     // 回到上一步
     undoStack.pop();
-    drawingLayer = undoStack[undoStack.length - 1];
-    renderCanvas();
+    const previous = undoStack[undoStack.length - 1];
+    ctxTop.putImageData(previous, 0, 0);
     document.getElementById('status').textContent = '↩️ 已復原';
 }
 
@@ -361,41 +358,51 @@ function redo() {
         return;
     }
     // 儲存當前到 undo
-    const current = ctx.createImageData(drawingLayer.width, drawingLayer.height);
-    current.data.set(drawingLayer.data);
+    const current = ctxTop.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     undoStack.push(current);
     
     // 從 redo 取出
-    drawingLayer = redoStack.pop();
-    renderCanvas();
+    const next = redoStack.pop();
+    ctxTop.putImageData(next, 0, 0);
     document.getElementById('status').textContent = '↪️ 已重做';
 }
 
 // ============================================================
-// 清空畫布（只清空繪圖層）
+// 清空畫布（只清空上層）
 // ============================================================
 
 function clearCanvas() {
     if (confirm('確定要清除所有繪圖嗎？（圖片不會被清除）')) {
-        clearDrawingLayer();
-        renderCanvas();
+        ctxTop.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         saveState();
         document.getElementById('status').textContent = '🗑 已清空畫布';
     }
 }
 
 // ============================================================
-// 匯出圖片（底圖 + 繪圖層）
+// 匯出圖片（合併底層 + 上層）
 // ============================================================
 
 function saveImage() {
+    // 建立一個暫存 canvas 來合併
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = CANVAS_WIDTH;
+    tempCanvas.height = CANVAS_HEIGHT;
+    const tempCtx = tempCanvas.getContext('2d');
+    
+    // 先畫底層
+    tempCtx.drawImage(canvasBottom, 0, 0);
+    // 再畫上層（筆跡）
+    tempCtx.drawImage(canvasTop, 0, 0);
+    
+    // 匯出
     const link = document.createElement('a');
     const now = new Date();
     const dateStr = now.getFullYear() + '-' + 
                    String(now.getMonth() + 1).padStart(2, '0') + '-' + 
                    String(now.getDate()).padStart(2, '0');
     link.download = '畢業帽塗鴉_' + dateStr + '.png';
-    link.href = canvas.toDataURL('image/png');
+    link.href = tempCanvas.toDataURL('image/png');
     link.click();
     document.getElementById('status').textContent = '💾 圖片已儲存！';
 }
@@ -404,16 +411,15 @@ function saveImage() {
 // 事件綁定
 // ============================================================
 
-// 滑鼠
-canvas.addEventListener('mousedown', startDrawing);
-canvas.addEventListener('mousemove', draw);
-canvas.addEventListener('mouseup', stopDrawing);
-canvas.addEventListener('mouseleave', stopDrawing);
+// 綁定到上層 canvas（因為上層接收所有繪圖事件）
+canvasTop.addEventListener('mousedown', startDrawing);
+canvasTop.addEventListener('mousemove', draw);
+canvasTop.addEventListener('mouseup', stopDrawing);
+canvasTop.addEventListener('mouseleave', stopDrawing);
 
-// 觸控
-canvas.addEventListener('touchstart', startDrawing, { passive: false });
-canvas.addEventListener('touchmove', draw, { passive: false });
-canvas.addEventListener('touchend', stopDrawing, { passive: false });
+canvasTop.addEventListener('touchstart', startDrawing, { passive: false });
+canvasTop.addEventListener('touchmove', draw, { passive: false });
+canvasTop.addEventListener('touchend', stopDrawing, { passive: false });
 
 // 顏色
 document.querySelectorAll('.color-btn').forEach(btn => {
@@ -462,7 +468,7 @@ document.getElementById('btnEraser').addEventListener('click', function() {
     eraserMode = true;
     this.classList.add('active');
     document.getElementById('btnPen').classList.remove('active');
-    document.getElementById('status').textContent = '🧹 橡皮擦模式（只擦筆跡）';
+    document.getElementById('status').textContent = '🧹 橡皮擦模式（只擦筆跡，不影響圖片）';
 });
 
 // 歷史
@@ -482,7 +488,9 @@ document.getElementById('btnSave').addEventListener('click', saveImage);
 initCanvas();
 
 console.log('🎓 畢業帽塗鴉板已啟動！');
-console.log('💡 橡皮擦只會擦掉筆跡，不會影響底圖！');
+console.log('📌 底層 = 圖片（永遠不變）');
+console.log('📌 上層 = 筆跡（橡皮擦只擦這裡）');
+console.log('💡 橡皮擦不會影響你的圖片！');
 </script>
 </body>
 </html>
