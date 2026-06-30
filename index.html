@@ -109,37 +109,81 @@
     </div>
 </div>
 <script>
+// ============================================================
+// 雙層繪圖系統：底圖 + 繪圖層
+// ============================================================
+
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
+
+// ----- 畫布設定 -----
 const CANVAS_WIDTH = 600;
 const CANVAS_HEIGHT = 600;
+
+// ----- 繪圖設定 -----
 let penColor = '#FF0000';
 let penWidth = 5;
 let eraserMode = false;
 let isDrawing = false;
-let lastX = null, lastY = null;
-let undoStack = [], redoStack = [];
+let lastX = null;
+let lastY = null;
+
+// ----- Undo/Redo -----
+let undoStack = [];
+let redoStack = [];
 const MAX_HISTORY = 50;
+
+// ----- 圖片 -----
 let hatImage = null;
+
+// ----- 繪圖層（只儲存筆跡，不包含底圖）-----
+let drawingLayer = null;
+
+// ============================================================
+// 初始化
+// ============================================================
 
 function initCanvas() {
     canvas.width = CANVAS_WIDTH;
     canvas.height = CANVAS_HEIGHT;
+    
+    // 建立空的繪圖層（全透明）
+    drawingLayer = ctx.createImageData(CANVAS_WIDTH, CANVAS_HEIGHT);
+    clearDrawingLayer();
+    
     loadHatImage();
 }
+
+function clearDrawingLayer() {
+    // 將繪圖層全部設為透明
+    for (let i = 0; i < drawingLayer.data.length; i += 4) {
+        drawingLayer.data[i] = 0;     // R
+        drawingLayer.data[i+1] = 0;   // G
+        drawingLayer.data[i+2] = 0;   // B
+        drawingLayer.data[i+3] = 0;   // A (完全透明)
+    }
+}
+
+// ============================================================
+// 載入圖片
+// ============================================================
 
 function loadHatImage() {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = function() {
         hatImage = img;
-        ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-        ctx.drawImage(img, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        renderCanvas();
         saveState();
         document.getElementById('status').textContent = '✅ 已載入圖片！';
+        console.log('✅ 成功載入圖片：hat.png');
     };
     img.onerror = function() {
-        ctx.fillStyle = 'white';
+        // 找不到圖片時顯示提示
+        hatImage = null;
+        renderCanvas();
+        
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
         ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         ctx.fillStyle = 'black';
         ctx.font = '24px Arial';
@@ -147,119 +191,231 @@ function loadHatImage() {
         ctx.textBaseline = 'middle';
         ctx.fillText('請將你的畢業帽圖片', CANVAS_WIDTH/2, CANVAS_HEIGHT/2 - 30);
         ctx.fillText('命名為 hat.png 放在此資料夾', CANVAS_WIDTH/2, CANVAS_HEIGHT/2 + 30);
+        
+        // 畫一個簡單的帽子
         ctx.fillStyle = '#FFD700';
         ctx.fillRect(200, 250, 200, 60);
         ctx.fillStyle = '#8B0000';
         ctx.fillRect(260, 310, 80, 50);
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(200, 250, 200, 60);
+        ctx.strokeRect(260, 310, 80, 50);
+        
         saveState();
         alert('找不到 hat.png！\n請將你的畢業帽圖片命名為 hat.png 放在程式同一個資料夾中。');
+        console.log('❌ 找不到 hat.png');
     };
     img.src = 'hat.png';
 }
+
+// ============================================================
+// 渲染：底圖 + 繪圖層
+// ============================================================
+
+function renderCanvas() {
+    // 1. 畫底圖
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    if (hatImage) {
+        ctx.drawImage(hatImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    }
+    
+    // 2. 畫繪圖層（筆跡）
+    if (drawingLayer) {
+        ctx.putImageData(drawingLayer, 0, 0);
+    }
+}
+
+// ============================================================
+// 繪畫功能（直接操作繪圖層）
+// ============================================================
 
 function getPos(e) {
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
+    
     let clientX, clientY;
-    if (e.touches) { clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; e.preventDefault(); }
-    else { clientX = e.clientX; clientY = e.clientY; }
-    return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+    if (e.touches) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+        e.preventDefault();
+    } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+    }
+    
+    return {
+        x: Math.max(0, Math.min((clientX - rect.left) * scaleX, CANVAS_WIDTH - 1)),
+        y: Math.max(0, Math.min((clientY - rect.top) * scaleY, CANVAS_HEIGHT - 1))
+    };
 }
 
 function startDrawing(e) {
     e.preventDefault();
     isDrawing = true;
     const pos = getPos(e);
-    lastX = pos.x; lastY = pos.y;
+    lastX = pos.x;
+    lastY = pos.y;
 }
 
 function draw(e) {
     e.preventDefault();
     if (!isDrawing || lastX === null || lastY === null) return;
+    
     const pos = getPos(e);
-    const currentX = Math.max(0, Math.min(pos.x, CANVAS_WIDTH - 1));
-    const currentY = Math.max(0, Math.min(pos.y, CANVAS_HEIGHT - 1));
-    ctx.save();
+    const currentX = pos.x;
+    const currentY = pos.y;
+    
+    // 在繪圖層上畫畫
+    // 先把繪圖層轉為臨時 canvas 來畫
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = CANVAS_WIDTH;
+    tempCanvas.height = CANVAS_HEIGHT;
+    const tempCtx = tempCanvas.getContext('2d');
+    
+    // 把目前的繪圖層畫到 temp canvas
+    tempCtx.putImageData(drawingLayer, 0, 0);
+    
+    // 在 temp canvas 上畫筆跡
     if (eraserMode) {
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.strokeStyle = 'rgba(0,0,0,1)';
-        ctx.lineWidth = penWidth * 2;
+        // 橡皮擦：用透明色擦掉筆跡
+        tempCtx.globalCompositeOperation = 'destination-out';
+        tempCtx.strokeStyle = 'rgba(0,0,0,1)';
+        tempCtx.lineWidth = penWidth * 2;
+        tempCtx.lineCap = 'round';
+        tempCtx.lineJoin = 'round';
+        tempCtx.beginPath();
+        tempCtx.moveTo(lastX, lastY);
+        tempCtx.lineTo(currentX, currentY);
+        tempCtx.stroke();
     } else {
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.strokeStyle = penColor;
-        ctx.lineWidth = penWidth;
+        // 畫筆：正常畫
+        tempCtx.globalCompositeOperation = 'source-over';
+        tempCtx.strokeStyle = penColor;
+        tempCtx.lineWidth = penWidth;
+        tempCtx.lineCap = 'round';
+        tempCtx.lineJoin = 'round';
+        tempCtx.beginPath();
+        tempCtx.moveTo(lastX, lastY);
+        tempCtx.lineTo(currentX, currentY);
+        tempCtx.stroke();
     }
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    ctx.moveTo(lastX, lastY);
-    ctx.lineTo(currentX, currentY);
-    ctx.stroke();
-    ctx.restore();
+    
+    // 把 temp canvas 的內容存回 drawingLayer
+    drawingLayer = tempCtx.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    
+    // 重新渲染畫面
+    renderCanvas();
+    
     lastX = currentX;
     lastY = currentY;
 }
 
 function stopDrawing(e) {
     e.preventDefault();
-    if (isDrawing) { isDrawing = false; lastX = null; lastY = null; saveState(); }
+    if (isDrawing) {
+        isDrawing = false;
+        lastX = null;
+        lastY = null;
+        saveState();
+    }
 }
 
+// ============================================================
+// Undo / Redo（只儲存繪圖層）
+// ============================================================
+
 function saveState() {
-    if (undoStack.length > MAX_HISTORY) undoStack.shift();
-    undoStack.push(canvas.toDataURL());
+    if (!drawingLayer) return;
+    if (undoStack.length > MAX_HISTORY) {
+        undoStack.shift();
+    }
+    // 深拷貝繪圖層
+    const copy = ctx.createImageData(drawingLayer.width, drawingLayer.height);
+    copy.data.set(drawingLayer.data);
+    undoStack.push(copy);
     redoStack = [];
 }
 
 function undo() {
-    if (undoStack.length <= 1) { document.getElementById('status').textContent = '⚠️ 沒有更多步驟可以復原'; return; }
-    redoStack.push(undoStack.pop());
-    restoreState(undoStack[undoStack.length - 1]);
+    if (undoStack.length <= 1) {
+        document.getElementById('status').textContent = '⚠️ 沒有更多步驟可以復原';
+        return;
+    }
+    // 儲存當前到 redo
+    const current = ctx.createImageData(drawingLayer.width, drawingLayer.height);
+    current.data.set(drawingLayer.data);
+    redoStack.push(current);
+    
+    // 回到上一步
+    undoStack.pop();
+    drawingLayer = undoStack[undoStack.length - 1];
+    renderCanvas();
     document.getElementById('status').textContent = '↩️ 已復原';
 }
 
 function redo() {
-    if (redoStack.length === 0) { document.getElementById('status').textContent = '⚠️ 沒有更多步驟可以重做'; return; }
-    const state = redoStack.pop();
-    undoStack.push(state);
-    restoreState(state);
+    if (redoStack.length === 0) {
+        document.getElementById('status').textContent = '⚠️ 沒有更多步驟可以重做';
+        return;
+    }
+    // 儲存當前到 undo
+    const current = ctx.createImageData(drawingLayer.width, drawingLayer.height);
+    current.data.set(drawingLayer.data);
+    undoStack.push(current);
+    
+    // 從 redo 取出
+    drawingLayer = redoStack.pop();
+    renderCanvas();
     document.getElementById('status').textContent = '↪️ 已重做';
 }
 
-function restoreState(dataURL) {
-    const img = new Image();
-    img.onload = function() { ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT); ctx.drawImage(img, 0, 0); };
-    img.src = dataURL;
-}
+// ============================================================
+// 清空畫布（只清空繪圖層）
+// ============================================================
 
 function clearCanvas() {
-    if (confirm('確定要清除所有繪圖嗎？')) {
-        if (hatImage) { ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT); ctx.drawImage(hatImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT); }
-        else { loadHatImage(); }
+    if (confirm('確定要清除所有繪圖嗎？（圖片不會被清除）')) {
+        clearDrawingLayer();
+        renderCanvas();
         saveState();
         document.getElementById('status').textContent = '🗑 已清空畫布';
     }
 }
 
+// ============================================================
+// 匯出圖片（底圖 + 繪圖層）
+// ============================================================
+
 function saveImage() {
     const link = document.createElement('a');
     const now = new Date();
-    const dateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    const dateStr = now.getFullYear() + '-' + 
+                   String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                   String(now.getDate()).padStart(2, '0');
     link.download = '畢業帽塗鴉_' + dateStr + '.png';
     link.href = canvas.toDataURL('image/png');
     link.click();
     document.getElementById('status').textContent = '💾 圖片已儲存！';
 }
 
+// ============================================================
+// 事件綁定
+// ============================================================
+
+// 滑鼠
 canvas.addEventListener('mousedown', startDrawing);
 canvas.addEventListener('mousemove', draw);
 canvas.addEventListener('mouseup', stopDrawing);
 canvas.addEventListener('mouseleave', stopDrawing);
+
+// 觸控
 canvas.addEventListener('touchstart', startDrawing, { passive: false });
 canvas.addEventListener('touchmove', draw, { passive: false });
 canvas.addEventListener('touchend', stopDrawing, { passive: false });
 
+// 顏色
 document.querySelectorAll('.color-btn').forEach(btn => {
     btn.addEventListener('click', function() {
         document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
@@ -273,6 +429,7 @@ document.querySelectorAll('.color-btn').forEach(btn => {
     });
 });
 
+// 自訂顏色
 document.getElementById('customColor').addEventListener('input', function() {
     penColor = this.value;
     document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
@@ -283,13 +440,17 @@ document.getElementById('customColor').addEventListener('input', function() {
     document.getElementById('status').textContent = '🟢 畫筆模式 | 顏色: ' + penColor;
 });
 
-document.getElementById('customColorBtn').addEventListener('click', function() { document.getElementById('customColor').click(); });
+document.getElementById('customColorBtn').addEventListener('click', function() {
+    document.getElementById('customColor').click();
+});
 
+// 筆刷大小
 document.getElementById('brushSize').addEventListener('input', function() {
     penWidth = parseInt(this.value);
     document.getElementById('sizeLabel').textContent = penWidth;
 });
 
+// 工具
 document.getElementById('btnPen').addEventListener('click', function() {
     eraserMode = false;
     this.classList.add('active');
@@ -301,16 +462,27 @@ document.getElementById('btnEraser').addEventListener('click', function() {
     eraserMode = true;
     this.classList.add('active');
     document.getElementById('btnPen').classList.remove('active');
-    document.getElementById('status').textContent = '🧹 橡皮擦模式';
+    document.getElementById('status').textContent = '🧹 橡皮擦模式（只擦筆跡）';
 });
 
+// 歷史
 document.getElementById('btnUndo').addEventListener('click', undo);
 document.getElementById('btnRedo').addEventListener('click', redo);
+
+// 清空
 document.getElementById('btnClear').addEventListener('click', clearCanvas);
+
+// 匯出
 document.getElementById('btnSave').addEventListener('click', saveImage);
 
+// ============================================================
+// 啟動
+// ============================================================
+
 initCanvas();
+
 console.log('🎓 畢業帽塗鴉板已啟動！');
+console.log('💡 橡皮擦只會擦掉筆跡，不會影響底圖！');
 </script>
 </body>
 </html>
