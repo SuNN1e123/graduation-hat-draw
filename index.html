@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>🎓 畢業帽塗鴉板</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+        body { font-family: Arial, "Microsoft JhengHei", sans-serif; background: #f0f0f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; touch-action: none; padding: 10px; }
+        .container { background: #f0f0f0; border-radius: 12px; max-width: 1100px; width: 100%; height: 90vh; display: flex; gap: 10px; padding: 10px; }
+        .left-panel { background: #f0f0f0; width: 220px; min-width: 200px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; padding-right: 5px; }
+        .title { font-size: 20px; font-weight: bold; text-align: center; padding: 10px 0; color: #333; background: #f0f0f0; }
+        .tool-group { background: white; border-radius: 8px; padding: 12px; border: 1px solid #e0e0e0; }
+        .tool-group-title { font-size: 13px; font-weight: bold; color: #555; margin-bottom: 8px; display: block; }
+        .color-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+        .color-btn { width: 100%; aspect-ratio: 1; border-radius: 50%; border: 3px solid transparent; cursor: pointer; transition: all 0.2s; min-height: 35px; }
+        .color-btn:hover { transform: scale(1.05); }
+        .color-btn.active { border-color: #333; box-shadow: 0 0 0 2px white, 0 0 0 4px #333; }
+        .custom-color-row { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+        .custom-color-row input[type="color"] { flex: 1; height: 35px; border: none; border-radius: 6px; cursor: pointer; padding: 0; }
+        .custom-color-row button { flex: 1; padding: 6px; border: 1px solid #ddd; border-radius: 6px; background: white; cursor: pointer; font-size: 13px; }
+        .color-preview { width: 100%; height: 25px; border-radius: 6px; margin-top: 8px; border: 1px solid #ddd; }
+        .size-control { display: flex; align-items: center; gap: 10px; }
+        .size-control input[type="range"] { flex: 1; cursor: pointer; }
+        .size-label { font-size: 14px; font-weight: bold; min-width: 25px; text-align: center; }
+        .tool-btn { width: 100%; padding: 10px; border: none; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; transition: all 0.2s; margin-bottom: 5px; color: white; }
+        .tool-btn:hover { transform: scale(1.02); }
+        .tool-btn:active { transform: scale(0.98); }
+        .btn-pen { background: #4CAF50; }
+        .btn-pen.active { background: #388E3C; box-shadow: 0 0 0 3px #333; }
+        .btn-eraser { background: #FF9800; }
+        .btn-eraser.active { background: #F57C00; box-shadow: 0 0 0 3px #333; }
+        .btn-clear { background: #f44336; }
+        .btn-undo { background: #2196F3; }
+        .btn-redo { background: #9C27B0; }
+        .btn-save { background: #4CAF50; font-size: 16px; padding: 12px; height: auto; }
+        .status { text-align: center; font-size: 13px; color: #555; padding: 8px; background: white; border-radius: 8px; border: 1px solid #e0e0e0; min-height: 36px; display: flex; align-items: center; justify-content: center; }
+        .right-panel { flex: 1; background: white; border-radius: 8px; border: 2px solid #ddd; overflow: hidden; position: relative; min-height: 400px; }
+        .right-panel canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+        .left-panel::-webkit-scrollbar { width: 4px; }
+        .left-panel::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+        @media (max-width: 768px) {
+            .container { flex-direction: column; height: auto; min-height: 100vh; gap: 8px; padding: 8px; }
+            .left-panel { width: 100%; min-width: unset; flex-direction: row; flex-wrap: wrap; gap: 6px; padding-right: 0; max-height: 300px; overflow-y: auto; }
+            .left-panel > * { flex: 1; min-width: 140px; }
+            .title { width: 100%; font-size: 18px; padding: 5px 0; }
+            .right-panel { min-height: 300px; flex: 1; }
+        }
+        @media (max-width: 480px) {
+            .left-panel { max-height: 250px; }
+            .left-panel > * { min-width: 120px; }
+            .tool-group { padding: 8px; }
+            .color-btn { min-height: 28px; }
+            .tool-btn { padding: 6px; font-size: 12px; }
+            .title { font-size: 16px; }
+        }
+        @media (pointer: coarse) {
+            .tool-btn { padding: 12px; font-size: 16px; min-height: 48px; }
+            .color-btn { min-height: 40px; }
+            .btn-save { min-height: 56px; font-size: 18px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="left-panel">
+        <div class="title">🎓 畢業帽塗鴉</div>
+        <div class="tool-group">
+            <span class="tool-group-title">🎨 顏色</span>
+            <div class="color-grid" id="colorGrid">
+                <button class="color-btn active" style="background:#FF0000" data-color="#FF0000"></button>
+                <button class="color-btn" style="background:#FF6B00" data-color="#FF6B00"></button>
+                <button class="color-btn" style="background:#FFD700" data-color="#FFD700"></button>
+                <button class="color-btn" style="background:#00CC00" data-color="#00CC00"></button>
+                <button class="color-btn" style="background:#0066FF" data-color="#0066FF"></button>
+                <button class="color-btn" style="background:#8B00FF" data-color="#8B00FF"></button>
+                <button class="color-btn" style="background:#FF00FF" data-color="#FF00FF"></button>
+                <button class="color-btn" style="background:#000000" data-color="#000000"></button>
+            </div>
+            <div class="custom-color-row">
+                <input type="color" id="customColor" value="#FF0000">
+                <button id="customColorBtn">自訂顏色</button>
+            </div>
+            <div class="color-preview" id="colorPreview" style="background:#FF0000;"></div>
+        </div>
+        <div class="tool-group">
+            <span class="tool-group-title">✏️ 筆刷大小</span>
+            <div class="size-control">
+                <input type="range" id="brushSize" min="1" max="30" value="5">
+                <span class="size-label" id="sizeLabel">5</span>
+            </div>
+        </div>
+        <div class="tool-group">
+            <span class="tool-group-title">🛠 工具</span>
+            <button class="tool-btn btn-pen active" id="btnPen">✏️ 畫筆</button>
+            <button class="tool-btn btn-eraser" id="btnEraser">🧹 橡皮擦</button>
+            <button class="tool-btn btn-clear" id="btnClear">🗑 清空畫布</button>
+        </div>
+        <div class="tool-group">
+            <span class="tool-group-title">↩️ 歷史</span>
+            <button class="tool-btn btn-undo" id="btnUndo">↩️ 復原</button>
+            <button class="tool-btn btn-redo" id="btnRedo">↪️ 重做</button>
+        </div>
+        <button class="tool-btn btn-save" id="btnSave">💾 匯出圖片</button>
+        <div class="status" id="status">🟢 畫筆模式</div>
+    </div>
+    <div class="right-panel">
+        <canvas id="canvas"></canvas>
+    </div>
+</div>
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const CANVAS_WIDTH = 600;
+const CANVAS_HEIGHT = 600;
+let penColor = '#FF0000';
+let penWidth = 5;
+let eraserMode = false;
+let isDrawing = false;
+let lastX = null, lastY = null;
+let undoStack = [], redoStack = [];
+const MAX_HISTORY = 50;
+let hatImage = null;
+
+function initCanvas() {
+    canvas.width = CANVAS_WIDTH;
+    canvas.height = CANVAS_HEIGHT;
+    loadHatImage();
+}
+
+function loadHatImage() {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function() {
+        hatImage = img;
+        ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctx.drawImage(img, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        saveState();
+        document.getElementById('status').textContent = '✅ 已載入圖片！';
+    };
+    img.onerror = function() {
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctx.fillStyle = 'black';
+        ctx.font = '24px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('請將你的畢業帽圖片', CANVAS_WIDTH/2, CANVAS_HEIGHT/2 - 30);
+        ctx.fillText('命名為 hat.png 放在此資料夾', CANVAS_WIDTH/2, CANVAS_HEIGHT/2 + 30);
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(200, 250, 200, 60);
+        ctx.fillStyle = '#8B0000';
+        ctx.fillRect(260, 310, 80, 50);
+        saveState();
+        alert('找不到 hat.png！\n請將你的畢業帽圖片命名為 hat.png 放在程式同一個資料夾中。');
+    };
+    img.src = 'hat.png';
+}
+
+function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    let clientX, clientY;
+    if (e.touches) { clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; e.preventDefault(); }
+    else { clientX = e.clientX; clientY = e.clientY; }
+    return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+}
+
+function startDrawing(e) {
+    e.preventDefault();
+    isDrawing = true;
+    const pos = getPos(e);
+    lastX = pos.x; lastY = pos.y;
+}
+
+function draw(e) {
+    e.preventDefault();
+    if (!isDrawing || lastX === null || lastY === null) return;
+    const pos = getPos(e);
+    const currentX = Math.max(0, Math.min(pos.x, CANVAS_WIDTH - 1));
+    const currentY = Math.max(0, Math.min(pos.y, CANVAS_HEIGHT - 1));
+    ctx.save();
+    if (eraserMode) {
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.strokeStyle = 'rgba(0,0,0,1)';
+        ctx.lineWidth = penWidth * 2;
+    } else {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = penColor;
+        ctx.lineWidth = penWidth;
+    }
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(currentX, currentY);
+    ctx.stroke();
+    ctx.restore();
+    lastX = currentX;
+    lastY = currentY;
+}
+
+function stopDrawing(e) {
+    e.preventDefault();
+    if (isDrawing) { isDrawing = false; lastX = null; lastY = null; saveState(); }
+}
+
+function saveState() {
+    if (undoStack.length > MAX_HISTORY) undoStack.shift();
+    undoStack.push(canvas.toDataURL());
+    redoStack = [];
+}
+
+function undo() {
+    if (undoStack.length <= 1) { document.getElementById('status').textContent = '⚠️ 沒有更多步驟可以復原'; return; }
+    redoStack.push(undoStack.pop());
+    restoreState(undoStack[undoStack.length - 1]);
+    document.getElementById('status').textContent = '↩️ 已復原';
+}
+
+function redo() {
+    if (redoStack.length === 0) { document.getElementById('status').textContent = '⚠️ 沒有更多步驟可以重做'; return; }
+    const state = redoStack.pop();
+    undoStack.push(state);
+    restoreState(state);
+    document.getElementById('status').textContent = '↪️ 已重做';
+}
+
+function restoreState(dataURL) {
+    const img = new Image();
+    img.onload = function() { ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT); ctx.drawImage(img, 0, 0); };
+    img.src = dataURL;
+}
+
+function clearCanvas() {
+    if (confirm('確定要清除所有繪圖嗎？')) {
+        if (hatImage) { ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT); ctx.drawImage(hatImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT); }
+        else { loadHatImage(); }
+        saveState();
+        document.getElementById('status').textContent = '🗑 已清空畫布';
+    }
+}
+
+function saveImage() {
+    const link = document.createElement('a');
+    const now = new Date();
+    const dateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    link.download = '畢業帽塗鴉_' + dateStr + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    document.getElementById('status').textContent = '💾 圖片已儲存！';
+}
+
+canvas.addEventListener('mousedown', startDrawing);
+canvas.addEventListener('mousemove', draw);
+canvas.addEventListener('mouseup', stopDrawing);
+canvas.addEventListener('mouseleave', stopDrawing);
+canvas.addEventListener('touchstart', startDrawing, { passive: false });
+canvas.addEventListener('touchmove', draw, { passive: false });
+canvas.addEventListener('touchend', stopDrawing, { passive: false });
+
+document.querySelectorAll('.color-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        penColor = this.dataset.color;
+        eraserMode = false;
+        document.getElementById('btnPen').classList.add('active');
+        document.getElementById('btnEraser').classList.remove('active');
+        document.getElementById('colorPreview').style.background = penColor;
+        document.getElementById('status').textContent = '🟢 畫筆模式 | 顏色: ' + penColor;
+    });
+});
+
+document.getElementById('customColor').addEventListener('input', function() {
+    penColor = this.value;
+    document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('colorPreview').style.background = penColor;
+    eraserMode = false;
+    document.getElementById('btnPen').classList.add('active');
+    document.getElementById('btnEraser').classList.remove('active');
+    document.getElementById('status').textContent = '🟢 畫筆模式 | 顏色: ' + penColor;
+});
+
+document.getElementById('customColorBtn').addEventListener('click', function() { document.getElementById('customColor').click(); });
+
+document.getElementById('brushSize').addEventListener('input', function() {
+    penWidth = parseInt(this.value);
+    document.getElementById('sizeLabel').textContent = penWidth;
+});
+
+document.getElementById('btnPen').addEventListener('click', function() {
+    eraserMode = false;
+    this.classList.add('active');
+    document.getElementById('btnEraser').classList.remove('active');
+    document.getElementById('status').textContent = '🟢 畫筆模式 | 顏色: ' + penColor;
+});
+
+document.getElementById('btnEraser').addEventListener('click', function() {
+    eraserMode = true;
+    this.classList.add('active');
+    document.getElementById('btnPen').classList.remove('active');
+    document.getElementById('status').textContent = '🧹 橡皮擦模式';
+});
+
+document.getElementById('btnUndo').addEventListener('click', undo);
+document.getElementById('btnRedo').addEventListener('click', redo);
+document.getElementById('btnClear').addEventListener('click', clearCanvas);
+document.getElementById('btnSave').addEventListener('click', saveImage);
+
+initCanvas();
+console.log('🎓 畢業帽塗鴉板已啟動！');
+</script>
+</body>
+</html>
