@@ -2,39 +2,198 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>🎓 畢業帽塗鴉板</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
-        body { font-family: Arial, "Microsoft JhengHei", sans-serif; background: #f0f0f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; touch-action: none; padding: 10px; }
-        .container { background: #f0f0f0; border-radius: 12px; max-width: 1100px; width: 100%; height: 90vh; display: flex; gap: 10px; padding: 10px; }
-        .left-panel { background: #f0f0f0; width: 220px; min-width: 200px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; padding-right: 5px; }
-        .title { font-size: 20px; font-weight: bold; text-align: center; padding: 10px 0; color: #333; background: #f0f0f0; }
-        .tool-group { background: white; border-radius: 8px; padding: 12px; border: 1px solid #e0e0e0; }
-        .tool-group-title { font-size: 13px; font-weight: bold; color: #555; margin-bottom: 8px; display: block; }
-        .color-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
-        .color-btn { width: 100%; aspect-ratio: 1; border-radius: 50%; border: 3px solid transparent; cursor: pointer; transition: all 0.2s; min-height: 35px; }
-        .color-btn:hover { transform: scale(1.05); }
-        .color-btn.active { border-color: #333; box-shadow: 0 0 0 2px white, 0 0 0 4px #333; }
-        .custom-color-row { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
-        .custom-color-row input[type="color"] { flex: 1; height: 35px; border: none; border-radius: 6px; cursor: pointer; padding: 0; }
-        .custom-color-row button { flex: 1; padding: 6px; border: 1px solid #ddd; border-radius: 6px; background: white; cursor: pointer; font-size: 13px; }
-        .color-preview { width: 100%; height: 25px; border-radius: 6px; margin-top: 8px; border: 1px solid #ddd; }
-        .size-control { display: flex; align-items: center; gap: 10px; }
-        .size-control input[type="range"] { flex: 1; cursor: pointer; }
-        .size-label { font-size: 14px; font-weight: bold; min-width: 25px; text-align: center; }
-        .tool-btn { width: 100%; padding: 10px; border: none; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; transition: all 0.2s; margin-bottom: 5px; color: white; }
-        .tool-btn:hover { transform: scale(1.02); }
-        .tool-btn:active { transform: scale(0.98); }
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            -webkit-touch-callout: none; 
+            -webkit-user-select: none; 
+            user-select: none; 
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: Arial, "Microsoft JhengHei", sans-serif;
+            background: #f0f0f0;
+            touch-action: none;
+        }
+        
+        .container { 
+            display: flex;
+            flex-direction: row;
+            width: 100vw;
+            height: 100vh;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 8px;
+            gap: 8px;
+            background: #f0f0f0;
+        }
+        
+        /* ===== 左側工具面板 ===== */
+        .left-panel { 
+            background: #f0f0f0;
+            width: 200px;
+            min-width: 180px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            overflow-y: auto;
+            padding-right: 4px;
+            flex-shrink: 0;
+        }
+        
+        .left-panel::-webkit-scrollbar { width: 3px; }
+        .left-panel::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+        
+        .title { 
+            font-size: 18px; 
+            font-weight: bold; 
+            text-align: center; 
+            padding: 8px 0; 
+            color: #333;
+            flex-shrink: 0;
+        }
+        
+        .tool-group { 
+            background: white; 
+            border-radius: 8px; 
+            padding: 8px 10px; 
+            border: 1px solid #e0e0e0;
+            flex-shrink: 0;
+        }
+        
+        .tool-group-title { 
+            font-size: 12px; 
+            font-weight: bold; 
+            color: #555; 
+            margin-bottom: 5px; 
+            display: block; 
+        }
+        
+        .color-grid { 
+            display: grid; 
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 4px; 
+        }
+        
+        .color-btn { 
+            width: 100%; 
+            aspect-ratio: 1; 
+            border-radius: 50%; 
+            border: 2px solid transparent; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            min-height: 30px;
+        }
+        
+        .color-btn.active { 
+            border-color: #333; 
+            box-shadow: 0 0 0 2px white, 0 0 0 4px #333; 
+        }
+        
+        .custom-color-row { 
+            display: flex; 
+            gap: 6px; 
+            margin-top: 5px; 
+            align-items: center; 
+        }
+        
+        .custom-color-row input[type="color"] { 
+            flex: 1; 
+            height: 30px; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            padding: 0; 
+        }
+        
+        .custom-color-row button { 
+            flex: 1; 
+            padding: 4px 6px; 
+            border: 1px solid #ddd; 
+            border-radius: 4px; 
+            background: white; 
+            cursor: pointer; 
+            font-size: 12px; 
+        }
+        
+        .color-preview { 
+            width: 100%; 
+            height: 20px; 
+            border-radius: 4px; 
+            margin-top: 5px; 
+            border: 1px solid #ddd; 
+        }
+        
+        .size-control { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+        }
+        
+        .size-control input[type="range"] { 
+            flex: 1; 
+            cursor: pointer; 
+            height: 4px;
+        }
+        
+        .size-label { 
+            font-size: 13px; 
+            font-weight: bold; 
+            min-width: 20px; 
+            text-align: center; 
+        }
+        
+        .tool-btn { 
+            width: 100%; 
+            padding: 6px 8px; 
+            border: none; 
+            border-radius: 4px; 
+            font-size: 12px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            margin-bottom: 3px; 
+            color: white; 
+        }
+        
+        .tool-btn:active { transform: scale(0.97); }
         .btn-pen { background: #4CAF50; }
-        .btn-pen.active { background: #388E3C; box-shadow: 0 0 0 3px #333; }
+        .btn-pen.active { background: #388E3C; box-shadow: 0 0 0 2px #333; }
         .btn-eraser { background: #FF9800; }
-        .btn-eraser.active { background: #F57C00; box-shadow: 0 0 0 3px #333; }
+        .btn-eraser.active { background: #F57C00; box-shadow: 0 0 0 2px #333; }
         .btn-clear { background: #f44336; }
         .btn-undo { background: #2196F3; }
         .btn-redo { background: #9C27B0; }
-        .btn-save { background: #4CAF50; font-size: 16px; padding: 12px; height: auto; }
-        .status { text-align: center; font-size: 13px; color: #555; padding: 8px; background: white; border-radius: 8px; border: 1px solid #e0e0e0; min-height: 36px; display: flex; align-items: center; justify-content: center; }
+        .btn-save { 
+            background: #4CAF50; 
+            font-size: 14px; 
+            padding: 10px;
+            flex-shrink: 0;
+        }
+        
+        .status { 
+            text-align: center; 
+            font-size: 11px; 
+            color: #555; 
+            padding: 5px; 
+            background: white; 
+            border-radius: 6px; 
+            border: 1px solid #e0e0e0; 
+            min-height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        /* ===== 右側畫布 ===== */
         .right-panel { 
             flex: 1; 
             background: white; 
@@ -42,11 +201,12 @@
             border: 2px solid #ddd; 
             overflow: hidden; 
             position: relative; 
-            min-height: 400px;
+            min-height: 200px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
+        
         .right-panel .canvas-wrapper {
             position: relative;
             width: 100%;
@@ -55,6 +215,7 @@
             align-items: center;
             justify-content: center;
         }
+        
         .right-panel canvas {
             position: absolute;
             top: 0;
@@ -63,34 +224,152 @@
             height: 100%;
             touch-action: none;
             cursor: crosshair;
+            image-rendering: auto;
         }
-        #canvasBottom {
-            z-index: 1;
-        }
-        #canvasTop {
-            z-index: 2;
-        }
-        .left-panel::-webkit-scrollbar { width: 4px; }
-        .left-panel::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+        
+        #canvasBottom { z-index: 1; }
+        #canvasTop { z-index: 2; }
+        
+        /* ===== 手機專屬樣式 ===== */
         @media (max-width: 768px) {
-            .container { flex-direction: column; height: auto; min-height: 100vh; gap: 8px; padding: 8px; }
-            .left-panel { width: 100%; min-width: unset; flex-direction: row; flex-wrap: wrap; gap: 6px; padding-right: 0; max-height: 300px; overflow-y: auto; }
-            .left-panel > * { flex: 1; min-width: 140px; }
-            .title { width: 100%; font-size: 18px; padding: 5px 0; }
-            .right-panel { min-height: 300px; flex: 1; }
+            .container {
+                flex-direction: column;
+                height: 100vh;
+                padding: 4px;
+                gap: 4px;
+            }
+            
+            .left-panel {
+                width: 100%;
+                min-width: unset;
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 4px;
+                padding-right: 0;
+                max-height: 200px;
+                overflow-y: auto;
+                flex-shrink: 0;
+            }
+            
+            .left-panel > * {
+                flex: 1;
+                min-width: 100px;
+            }
+            
+            .title {
+                width: 100%;
+                font-size: 16px;
+                padding: 4px 0;
+                flex: 0 0 100%;
+            }
+            
+            .tool-group {
+                padding: 5px 8px;
+                min-width: 90px;
+            }
+            
+            .tool-group-title {
+                font-size: 10px;
+                margin-bottom: 3px;
+            }
+            
+            .color-btn {
+                min-height: 24px;
+            }
+            
+            .color-grid {
+                gap: 3px;
+            }
+            
+            .custom-color-row input[type="color"] {
+                height: 24px;
+            }
+            
+            .custom-color-row button {
+                font-size: 10px;
+                padding: 2px 4px;
+            }
+            
+            .color-preview {
+                height: 16px;
+                margin-top: 3px;
+            }
+            
+            .size-control input[type="range"] {
+                height: 3px;
+            }
+            
+            .size-label {
+                font-size: 11px;
+                min-width: 16px;
+            }
+            
+            .tool-btn {
+                padding: 4px 6px;
+                font-size: 10px;
+                margin-bottom: 2px;
+            }
+            
+            .btn-save {
+                font-size: 12px;
+                padding: 6px;
+            }
+            
+            .status {
+                font-size: 10px;
+                min-height: 22px;
+                padding: 3px 5px;
+            }
+            
+            .right-panel {
+                flex: 1;
+                min-height: 200px;
+            }
         }
-        @media (max-width: 480px) {
-            .left-panel { max-height: 250px; }
-            .left-panel > * { min-width: 120px; }
-            .tool-group { padding: 8px; }
-            .color-btn { min-height: 28px; }
-            .tool-btn { padding: 6px; font-size: 12px; }
-            .title { font-size: 16px; }
+        
+        @media (max-width: 400px) {
+            .left-panel {
+                max-height: 160px;
+            }
+            
+            .left-panel > * {
+                min-width: 70px;
+            }
+            
+            .tool-group {
+                padding: 3px 5px;
+            }
+            
+            .color-btn {
+                min-height: 20px;
+            }
+            
+            .tool-btn {
+                font-size: 9px;
+                padding: 3px 4px;
+            }
+            
+            .btn-save {
+                font-size: 10px;
+                padding: 4px;
+            }
+            
+            .title {
+                font-size: 14px;
+            }
         }
+        
+        /* 觸控優化 */
         @media (pointer: coarse) {
-            .tool-btn { padding: 12px; font-size: 16px; min-height: 48px; }
-            .color-btn { min-height: 40px; }
-            .btn-save { min-height: 56px; font-size: 18px; }
+            .tool-btn {
+                min-height: 36px;
+            }
+            .color-btn {
+                min-height: 30px;
+            }
+            .btn-save {
+                min-height: 40px;
+            }
         }
     </style>
 </head>
@@ -112,12 +391,12 @@
             </div>
             <div class="custom-color-row">
                 <input type="color" id="customColor" value="#FF0000">
-                <button id="customColorBtn">自訂顏色</button>
+                <button id="customColorBtn">自訂</button>
             </div>
             <div class="color-preview" id="colorPreview" style="background:#FF0000;"></div>
         </div>
         <div class="tool-group">
-            <span class="tool-group-title">✏️ 筆刷大小</span>
+            <span class="tool-group-title">✏️ 筆刷</span>
             <div class="size-control">
                 <input type="range" id="brushSize" min="1" max="30" value="5">
                 <span class="size-label" id="sizeLabel">5</span>
@@ -127,7 +406,7 @@
             <span class="tool-group-title">🛠 工具</span>
             <button class="tool-btn btn-pen active" id="btnPen">✏️ 畫筆</button>
             <button class="tool-btn btn-eraser" id="btnEraser">🧹 橡皮擦</button>
-            <button class="tool-btn btn-clear" id="btnClear">🗑 清空畫布</button>
+            <button class="tool-btn btn-clear" id="btnClear">🗑 清空</button>
         </div>
         <div class="tool-group">
             <span class="tool-group-title">↩️ 歷史</span>
@@ -146,20 +425,17 @@
 </div>
 <script>
 // ============================================================
-// 完美雙層繪圖系統
+// 完美雙層繪圖系統 - 手機優化版
 // ============================================================
 
-// ----- 兩個 canvas -----
-const canvasBottom = document.getElementById('canvasBottom');  // 底層：只放圖片
-const canvasTop = document.getElementById('canvasTop');        // 上層：只放筆跡
+const canvasBottom = document.getElementById('canvasBottom');
+const canvasTop = document.getElementById('canvasTop');
 const ctxBottom = canvasBottom.getContext('2d');
 const ctxTop = canvasTop.getContext('2d');
 
-// ----- 固定尺寸（像素） -----
 const CANVAS_WIDTH = 600;
 const CANVAS_HEIGHT = 600;
 
-// 設定兩個 canvas 的實際像素尺寸
 canvasBottom.width = CANVAS_WIDTH;
 canvasBottom.height = CANVAS_HEIGHT;
 canvasTop.width = CANVAS_WIDTH;
@@ -173,73 +449,143 @@ let isDrawing = false;
 let lastX = null;
 let lastY = null;
 
-// ----- Undo/Redo（只儲存上層） -----
+// ----- Undo/Redo -----
 let undoStack = [];
 let redoStack = [];
 const MAX_HISTORY = 50;
 
-// ----- 圖片 -----
-let hatImage = null;
-let imageLoaded = false;
-
 // ============================================================
-// 初始化
-// ============================================================
-
-function initCanvas() {
-    // 設定上層為全透明
-    ctxTop.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    
-    // 載入圖片
-    loadHatImage();
-}
-
-// ============================================================
-// 載入圖片（只畫在底層）
+// 載入圖片（支援手機）
 // ============================================================
 
 function loadHatImage() {
+    // 方法1：嘗試載入 hat.png
     const img = new Image();
     img.crossOrigin = 'anonymous';
+    
     img.onload = function() {
-        hatImage = img;
-        imageLoaded = true;
-        // 畫到底層
         ctxBottom.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         ctxBottom.drawImage(img, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         document.getElementById('status').textContent = '✅ 已載入圖片！';
-        console.log('✅ 成功載入圖片：hat.png');
+        console.log('✅ 成功載入圖片');
         saveState();
     };
+    
     img.onerror = function() {
-        imageLoaded = false;
-        hatImage = null;
-        // 在底層顯示提示
+        // 方法2：如果 hat.png 載入失敗，試試看從 data URL 載入
+        console.log('❌ hat.png 載入失敗，嘗試其他方法...');
+        
+        // 先顯示提示訊息
         ctxBottom.fillStyle = 'white';
         ctxBottom.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-        ctxBottom.fillStyle = 'black';
-        ctxBottom.font = '24px Arial';
+        ctxBottom.fillStyle = '#999';
+        ctxBottom.font = '20px Arial';
         ctxBottom.textAlign = 'center';
         ctxBottom.textBaseline = 'middle';
-        ctxBottom.fillText('請將你的畢業帽圖片', CANVAS_WIDTH/2, CANVAS_HEIGHT/2 - 30);
-        ctxBottom.fillText('命名為 hat.png 放在此資料夾', CANVAS_WIDTH/2, CANVAS_HEIGHT/2 + 30);
+        ctxBottom.fillText('📱 請點擊下方按鈕', CANVAS_WIDTH/2, CANVAS_HEIGHT/2 - 40);
+        ctxBottom.fillText('上傳你的畢業帽圖片', CANVAS_WIDTH/2, CANVAS_HEIGHT/2 + 10);
+        
+        // 畫一個簡單帽子
         ctxBottom.fillStyle = '#FFD700';
         ctxBottom.fillRect(200, 250, 200, 60);
         ctxBottom.fillStyle = '#8B0000';
         ctxBottom.fillRect(260, 310, 80, 50);
-        ctxBottom.strokeStyle = '#000000';
-        ctxBottom.lineWidth = 3;
+        ctxBottom.strokeStyle = '#333';
+        ctxBottom.lineWidth = 2;
         ctxBottom.strokeRect(200, 250, 200, 60);
         ctxBottom.strokeRect(260, 310, 80, 50);
-        alert('找不到 hat.png！\n請將你的畢業帽圖片命名為 hat.png 放在程式同一個資料夾中。');
-        console.log('❌ 找不到 hat.png');
+        
+        // 顯示上傳按鈕（手機專用）
+        showUploadButton();
+        
         saveState();
     };
+    
     img.src = 'hat.png';
+    
+    // 設定 timeout，如果 3 秒沒載入就顯示上傳按鈕
+    setTimeout(function() {
+        if (!img.complete || img.naturalWidth === 0) {
+            // 圖片還沒載入完成，但先顯示上傳按鈕
+            showUploadButton();
+        }
+    }, 3000);
+}
+
+function showUploadButton() {
+    // 在底部顯示上傳按鈕
+    const existingBtn = document.getElementById('uploadBtn');
+    if (existingBtn) return;
+    
+    const btn = document.createElement('button');
+    btn.id = 'uploadBtn';
+    btn.textContent = '📤 上傳圖片';
+    btn.style.cssText = `
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10;
+        padding: 12px 24px;
+        background: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 25px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        touch-action: manipulation;
+    `;
+    
+    btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        uploadImage();
+    });
+    
+    // 放在 right-panel 裡
+    const rightPanel = document.querySelector('.right-panel');
+    rightPanel.style.position = 'relative';
+    rightPanel.appendChild(btn);
+}
+
+function uploadImage() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.style.display = 'none';
+    
+    input.onchange = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const img = new Image();
+            img.onload = function() {
+                // 畫到底層
+                ctxBottom.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                ctxBottom.drawImage(img, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                document.getElementById('status').textContent = '✅ 圖片上傳成功！';
+                
+                // 移除上傳按鈕
+                const uploadBtn = document.getElementById('uploadBtn');
+                if (uploadBtn) uploadBtn.remove();
+                
+                saveState();
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    };
+    
+    document.body.appendChild(input);
+    input.click();
+    document.body.removeChild(input);
 }
 
 // ============================================================
-// 繪畫功能（只畫在上層）
+// 繪畫功能
 // ============================================================
 
 function getPos(e) {
@@ -279,11 +625,9 @@ function draw(e) {
     const currentX = Math.max(0, Math.min(pos.x, CANVAS_WIDTH - 1));
     const currentY = Math.max(0, Math.min(pos.y, CANVAS_HEIGHT - 1));
     
-    // ----- 只操作上層 canvas (ctxTop) -----
     ctxTop.save();
     
     if (eraserMode) {
-        // 橡皮擦：用 destination-out 擦掉上層的像素
         ctxTop.globalCompositeOperation = 'destination-out';
         ctxTop.strokeStyle = 'rgba(0,0,0,1)';
         ctxTop.lineWidth = penWidth * 2;
@@ -294,7 +638,6 @@ function draw(e) {
         ctxTop.lineTo(currentX, currentY);
         ctxTop.stroke();
     } else {
-        // 畫筆：正常畫在上層
         ctxTop.globalCompositeOperation = 'source-over';
         ctxTop.strokeStyle = penColor;
         ctxTop.lineWidth = penWidth;
@@ -323,79 +666,64 @@ function stopDrawing(e) {
 }
 
 // ============================================================
-// Undo / Redo（只儲存上層）
+// Undo / Redo
 // ============================================================
 
 function saveState() {
-    // 儲存上層 canvas 的資料
     const imageData = ctxTop.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    if (undoStack.length > MAX_HISTORY) {
-        undoStack.shift();
-    }
+    if (undoStack.length > MAX_HISTORY) undoStack.shift();
     undoStack.push(imageData);
     redoStack = [];
 }
 
 function undo() {
     if (undoStack.length <= 1) {
-        document.getElementById('status').textContent = '⚠️ 沒有更多步驟可以復原';
+        document.getElementById('status').textContent = '⚠️ 沒有更多步驟';
         return;
     }
-    // 儲存當前到 redo
     const current = ctxTop.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     redoStack.push(current);
-    
-    // 回到上一步
     undoStack.pop();
-    const previous = undoStack[undoStack.length - 1];
-    ctxTop.putImageData(previous, 0, 0);
+    ctxTop.putImageData(undoStack[undoStack.length - 1], 0, 0);
     document.getElementById('status').textContent = '↩️ 已復原';
 }
 
 function redo() {
     if (redoStack.length === 0) {
-        document.getElementById('status').textContent = '⚠️ 沒有更多步驟可以重做';
+        document.getElementById('status').textContent = '⚠️ 沒有更多步驟';
         return;
     }
-    // 儲存當前到 undo
     const current = ctxTop.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     undoStack.push(current);
-    
-    // 從 redo 取出
-    const next = redoStack.pop();
-    ctxTop.putImageData(next, 0, 0);
+    ctxTop.putImageData(redoStack.pop(), 0, 0);
     document.getElementById('status').textContent = '↪️ 已重做';
 }
 
 // ============================================================
-// 清空畫布（只清空上層）
+// 清空畫布
 // ============================================================
 
 function clearCanvas() {
-    if (confirm('確定要清除所有繪圖嗎？（圖片不會被清除）')) {
+    if (confirm('確定要清除所有繪圖嗎？')) {
         ctxTop.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         saveState();
-        document.getElementById('status').textContent = '🗑 已清空畫布';
+        document.getElementById('status').textContent = '🗑 已清空';
     }
 }
 
 // ============================================================
-// 匯出圖片（合併底層 + 上層）
+// 匯出圖片
 // ============================================================
 
 function saveImage() {
-    // 建立一個暫存 canvas 來合併
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = CANVAS_WIDTH;
     tempCanvas.height = CANVAS_HEIGHT;
     const tempCtx = tempCanvas.getContext('2d');
     
-    // 先畫底層
     tempCtx.drawImage(canvasBottom, 0, 0);
-    // 再畫上層（筆跡）
     tempCtx.drawImage(canvasTop, 0, 0);
     
-    // 匯出
     const link = document.createElement('a');
     const now = new Date();
     const dateStr = now.getFullYear() + '-' + 
@@ -404,14 +732,13 @@ function saveImage() {
     link.download = '畢業帽塗鴉_' + dateStr + '.png';
     link.href = tempCanvas.toDataURL('image/png');
     link.click();
-    document.getElementById('status').textContent = '💾 圖片已儲存！';
+    document.getElementById('status').textContent = '💾 已儲存！';
 }
 
 // ============================================================
 // 事件綁定
 // ============================================================
 
-// 綁定到上層 canvas（因為上層接收所有繪圖事件）
 canvasTop.addEventListener('mousedown', startDrawing);
 canvasTop.addEventListener('mousemove', draw);
 canvasTop.addEventListener('mouseup', stopDrawing);
@@ -431,11 +758,10 @@ document.querySelectorAll('.color-btn').forEach(btn => {
         document.getElementById('btnPen').classList.add('active');
         document.getElementById('btnEraser').classList.remove('active');
         document.getElementById('colorPreview').style.background = penColor;
-        document.getElementById('status').textContent = '🟢 畫筆模式 | 顏色: ' + penColor;
+        document.getElementById('status').textContent = '🟢 畫筆模式';
     });
 });
 
-// 自訂顏色
 document.getElementById('customColor').addEventListener('input', function() {
     penColor = this.value;
     document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
@@ -443,54 +769,49 @@ document.getElementById('customColor').addEventListener('input', function() {
     eraserMode = false;
     document.getElementById('btnPen').classList.add('active');
     document.getElementById('btnEraser').classList.remove('active');
-    document.getElementById('status').textContent = '🟢 畫筆模式 | 顏色: ' + penColor;
+    document.getElementById('status').textContent = '🟢 畫筆模式';
 });
 
 document.getElementById('customColorBtn').addEventListener('click', function() {
     document.getElementById('customColor').click();
 });
 
-// 筆刷大小
 document.getElementById('brushSize').addEventListener('input', function() {
     penWidth = parseInt(this.value);
     document.getElementById('sizeLabel').textContent = penWidth;
 });
 
-// 工具
 document.getElementById('btnPen').addEventListener('click', function() {
     eraserMode = false;
     this.classList.add('active');
     document.getElementById('btnEraser').classList.remove('active');
-    document.getElementById('status').textContent = '🟢 畫筆模式 | 顏色: ' + penColor;
+    document.getElementById('status').textContent = '🟢 畫筆模式';
 });
 
 document.getElementById('btnEraser').addEventListener('click', function() {
     eraserMode = true;
     this.classList.add('active');
     document.getElementById('btnPen').classList.remove('active');
-    document.getElementById('status').textContent = '🧹 橡皮擦模式（只擦筆跡，不影響圖片）';
+    document.getElementById('status').textContent = '🧹 橡皮擦模式';
 });
 
-// 歷史
 document.getElementById('btnUndo').addEventListener('click', undo);
 document.getElementById('btnRedo').addEventListener('click', redo);
-
-// 清空
 document.getElementById('btnClear').addEventListener('click', clearCanvas);
-
-// 匯出
 document.getElementById('btnSave').addEventListener('click', saveImage);
 
 // ============================================================
 // 啟動
 // ============================================================
 
-initCanvas();
+// 設定底層為白色背景
+ctxBottom.fillStyle = 'white';
+ctxBottom.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-console.log('🎓 畢業帽塗鴉板已啟動！');
-console.log('📌 底層 = 圖片（永遠不變）');
-console.log('📌 上層 = 筆跡（橡皮擦只擦這裡）');
-console.log('💡 橡皮擦不會影響你的圖片！');
+loadHatImage();
+
+console.log('🎓 畢業帽塗鴉板已啟動（手機優化版）！');
+console.log('📱 如果圖片無法載入，請點擊「上傳圖片」按鈕');
 </script>
 </body>
 </html>
